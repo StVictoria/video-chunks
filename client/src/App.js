@@ -9,14 +9,16 @@ function App() {
   const [files, setFiles] = useState([])
   const [currentFileIndex, setCurrentFileIndex] = useState(null) // file that is currently uploading
   const [lastUploadedFileIndex, setLastUploadedFileIndex] = useState(null)
-  const [currentChunkIndex, setCurrentChunkIndex] = useState(0)
+  const [currentChunkIndex, setCurrentChunkIndex] = useState(null)
 
   const handleDrop = (e) => {
     e.preventDefault()
-    setFiles([...files, ...e.dataTranfer.files])
+    setFiles([...files, ...e?.dataTransfer?.files])
+    console.log('1 drop')
   }
 
   const uploadChunk = (readerEvent) => {
+    console.log('7 upload chunks')
     const file = files[currentFileIndex]
     const data = readerEvent.target.result
 
@@ -28,16 +30,20 @@ function App() {
 
     const headers = { 'Content-Type': 'application/octet-stream' }
 
-    const url = `http://localhost:4000/upload?${params.toString()}`
+    const url = `http://localhost:4001/upload?${params.toString()}`
 
-    axios.post(url, data, {
-      headers,
-    }).then(response => {
-
-    })
+    console.log('8 send to url', url)
+    axios
+      .post(url, data, {
+        headers,
+      })
+      .then((response) => {
+        console.log('response', response)
+      })
   }
 
   const readAndUploadCurrentChunk = () => {
+    console.log('5 readAndUpload fired')
     const reader = new FileReader()
     const file = files[currentFileIndex]
 
@@ -48,15 +54,17 @@ function App() {
 
     const blob = file.slice(from, to)
     reader.onload = (e) => uploadChunk(e)
+    console.log('6 added onload for reader')
     reader.readAsDataURL(blob)
   }
 
   useEffect(() => {
     if (files.length > 0) {
-      if (setCurrentFileIndex === null) {
+      if (currentFileIndex === null) {
         setCurrentFileIndex(
           lastUploadedFileIndex === null ? 0 : lastUploadedFileIndex + 1
         )
+        console.log('2 set current file index')
       }
     }
   }, [files.length])
@@ -64,13 +72,17 @@ function App() {
   useEffect(() => {
     if (currentFileIndex !== null) {
       setCurrentChunkIndex(0)
+      console.log('3 current chunk index')
     }
   }, [currentFileIndex])
 
   useEffect(() => {
     if (currentChunkIndex !== null) {
       readAndUploadCurrentChunk()
+      console.log('4 readAndUploadCurrentChunk')
     }
+    console.log('currentChunkIndex changed to', currentChunkIndex);
+    
   }, [currentChunkIndex])
 
   return (
