@@ -38,7 +38,20 @@ function App() {
         headers,
       })
       .then((response) => {
-        console.log('response', response)
+        console.log('resp', response)
+
+        const file = files[currentFileIndex]
+        const fileSize = file.size
+        const isLastChunk =
+          currentChunkIndex === Math.ceil(fileSize / chunkSize) - 1
+
+        if (isLastChunk) {
+          file.finalFileName = response.data.finalFileName
+          setLastUploadedFileIndex(currentFileIndex)
+          setCurrentChunkIndex(null)
+        } else {
+          setCurrentChunkIndex(currentChunkIndex + 1)
+        }
       })
   }
 
@@ -57,6 +70,16 @@ function App() {
     console.log('6 added onload for reader')
     reader.readAsDataURL(blob)
   }
+
+  useEffect(() => {
+    if (lastUploadedFileIndex === null) {
+      return
+    }
+
+    const isLastFile = lastUploadedFileIndex === files.length - 1
+    const nextFileIndex = isLastFile ? null : currentFileIndex + 1
+    setCurrentFileIndex(nextFileIndex)
+  }, [lastUploadedFileIndex])
 
   useEffect(() => {
     if (files.length > 0) {
@@ -81,8 +104,7 @@ function App() {
       readAndUploadCurrentChunk()
       console.log('4 readAndUploadCurrentChunk')
     }
-    console.log('currentChunkIndex changed to', currentChunkIndex);
-    
+    console.log('currentChunkIndex changed to', currentChunkIndex)
   }, [currentChunkIndex])
 
   return (
@@ -100,6 +122,39 @@ function App() {
         className={'dropzone' + (dropzoneActive ? ' active' : '')}
       >
         Drop your files
+      </div>
+
+      <div className='files'>
+        {files?.map((file, fileIndex) => {
+          let progress = 0
+          if (file.finalFileName) {
+            progress = 100
+          } else {
+            const uploading = fileIndex === currentFileIndex
+            const chunks = Math.ceil(file?.size / chunkSize)
+            if (uploading) {
+              progress = Math.round((currentChunkIndex / chunks) * 100)
+            } else {
+              progress = 0
+            }
+          }
+          console.log(file, file.finalFileName)
+          return (
+            <a
+              className='file'
+              target='_blank'
+              href={'http://localhost:4001/uploads/' + file.finalFileName}
+            >
+              <div className='name'>{file.name}</div>
+              <div
+                className={'progress' + (progress === 100 ? ' done' : '')}
+                style={{ width: progress + '%' }}
+              >
+                {progress}%
+              </div>
+            </a>
+          )
+        })}
       </div>
     </div>
   )

@@ -11,6 +11,7 @@ app.use(
     origin: 'http://localhost:3000',
   })
 )
+app.use('/uploads', express.static('uploads'))
 
 app.post('/upload', (req, res) => {
   const { name, currentChunkIndex, totalChunks } = req.query
@@ -21,18 +22,21 @@ app.post('/upload', (req, res) => {
   const ext = name.split('.').pop() // test.jpeg - will take only part after dot
   const data = req.body.toString().split(',')[1]
 
-  const buffer = new Buffer(data)
+  const buffer = new Buffer(data, 'base64')
   const tempFileName = 'temp_' + md5(name + req.ip) + '.' + ext
 
-  if (firstChunk) fs.unlinkSync('./uploads/' + tempFileName)
+  if (firstChunk && fs.existsSync('./uploads/' + tempFileName)) {
+    fs.unlinkSync('./uploads/' + tempFileName)
+  }
   fs.appendFileSync('./uploads/' + tempFileName, buffer)
 
   if (lastChunk) {
     const finalFileName = md5(Date.now()).substr(0, 6) + '.' + ext
     fs.renameSync('./uploads/' + tempFileName, './uploads/' + finalFileName)
+    res.json({ finalFileName })
+  } else {
+    res.json('ok')
   }
-
-  res.send('ok')
 })
 
 app.listen(4001)
